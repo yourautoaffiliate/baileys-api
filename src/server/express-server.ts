@@ -9,6 +9,7 @@ export class ExpressServer {
 
 	constructor() {
 		this.app = express();
+		this.app.use(cors())
 		this.setupBodyParser();
 		this.setupMiddleware();
 		this.setupRoutes();

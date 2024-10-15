@@ -264,10 +264,14 @@ class WhatsappService {
 	}
 
 	static listSessions() {
+
 		return Array.from(WhatsappService.sessions.entries()).map(([id, session]) => ({
 			id,
 			status: WhatsappService.getSessionStatus(session),
+			name: session.user?.name,
 		}));
+		
+		  
 	}
 
 	static getSession(sessionId: string) {

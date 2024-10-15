@@ -26,7 +26,7 @@ export const addSSE: RequestHandler = async (req, res) => {
 	res.writeHead(200, {
 		"Content-Type": "text/event-stream",
 		"Cache-Control": "no-cache",
-		Connection: "keep-alive",
+		"Connection": "keep-alive",
 	});
 
 	if (WhatsappService.sessionExists(sessionId)) {
