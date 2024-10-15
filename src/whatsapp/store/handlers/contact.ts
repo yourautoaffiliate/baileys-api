@@ -3,6 +3,7 @@ import type { BaileysEventHandler } from "@/types";
 import { transformPrisma, logger, emitEvent } from "@/utils";
 import { prisma } from "@/config/database";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import WhatsappService from "@/whatsapp/service";
 
 export default function contactHandler(sessionId: string, event: BaileysEventEmitter) {
 	const model = prisma.contact;
@@ -17,16 +18,27 @@ export default function contactHandler(sessionId: string, event: BaileysEventEmi
 			// 		where: { id: { notIn: contactIds }, sessionId },
 			// 	})
 			// ).map((c) => c.id);
-
-			const processedContacts = contacts.map((c) => transformPrisma(c));
-			const upsertPromises = processedContacts.map((data) =>
-				model.upsert({
+			const session = WhatsappService.getSession(sessionId);
+			const processedContacts = contacts.map(async (c) => {
+				try {
+					const imgUrl = await session.profilePictureUrl(c.id, 'image');
+					c.imgUrl = imgUrl;
+				} catch (error) {
+					// If there's an error fetching the profile picture, we'll just set it to null
+					c.imgUrl = null;
+				}
+				return transformPrisma(c);
+			});
+			
+			const upsertPromises = processedContacts.map(async (dataPromise) => {
+				const data = await dataPromise;
+				return model.upsert({
 					select: { pkId: true },
 					create: { ...data, sessionId },
 					update: data,
 					where: { sessionId_id: { id: data.id, sessionId } },
-				}),
-			);
+				});
+			});
 
 			await Promise.any([
 				...upsertPromises,

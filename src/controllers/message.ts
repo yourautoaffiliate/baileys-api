@@ -1,4 +1,4 @@
-import type { proto, WAGenericMediaMessage, WAMessage } from "baileys";
+import type { proto, WAGenericMediaMessage, WAMessage} from "baileys";
 import { downloadMediaMessage } from "baileys";
 import { serializePrisma, delay as delayMs, logger, emitEvent } from "@/utils";
 import type { RequestHandler } from "express";
@@ -37,7 +37,7 @@ export const list: RequestHandler = async (req, res) => {
 
 export const send: RequestHandler = async (req, res) => {
 	try {
-		const { jid, type = "number", message, options } = req.body;
+		const { jid, type = "number", message, options, imageBase64 } = req.body;
 		const sessionId = req.params.sessionId;
 		const session = WhatsappService.getSession(sessionId)!;
 
@@ -45,7 +45,32 @@ export const send: RequestHandler = async (req, res) => {
 		if (!validJid) return res.status(400).json({ error: "JID does not exists" });
 
 		await updatePresence(session, WAPresence.Available, validJid);
-		const result = await session.sendMessage(validJid, message, options);
+		let result: proto.WebMessageInfo | undefined;
+		if (imageBase64) {
+			result = await session.sendMessage(
+			  jid,
+			  {
+				image: Buffer.from(imageBase64, 'base64'),
+				caption: message.text,
+				jpegThumbnail: '',
+			  },
+			  options
+			);
+		  } else {			
+			// await session.sendPresenceUpdate("available", validJid);
+			// // Give some time for link preview generation
+			// await new Promise(resolve => setTimeout(resolve, 3000)); // 3 seconds delay
+			
+			// await session.sendPresenceUpdate("composing", validJid);
+			// await new Promise(resolve => setTimeout(resolve, Math.max(message.length * 10, 7500)));
+			// await session.sendPresenceUpdate("paused", validJid);
+			// result = await session.sendMessage(validJid, {
+			// text: message.text,
+			// linkPreview: null,
+			// });
+			
+			result = await session.sendMessage(validJid, {...message, linkPreview: null}, options);
+		  }
 		emitEvent("send.message", sessionId, { jid: validJid, result });
 		res.status(200).json(result);
 	} catch (e) {

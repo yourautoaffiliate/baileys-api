@@ -15,15 +15,14 @@ export const list: RequestHandler = async (req, res) => {
 			where: {
 				id: { endsWith: "g.us" },
 				sessionId,
-				OR: [
-					{
-						name: {
-							contains: String(search),
-						},
+				...(search ? {
+					name: {
+						contains: String(search),
 					},
-				],
+				} : {}),
 			},
 		});
+
 
 		res.status(200).json({
 			data: groups,
